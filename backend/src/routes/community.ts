@@ -21,10 +21,23 @@ communityRouter.get("/:id", async (req, res) => {
  * @returns {Array} - Array of Community objects
  */
 communityRouter.get("/", async (_, res) => {
-	const communities = await CommunityModel.find({}).lean();
+	const communities = await CommunityModel.aggregate([
+		{ $lookup: { from: 'users', localField: 'users', foreignField: '_id', as: 'userDetails' } },
+		{ $unwind: { path: "$userDetails", preserveNullAndEmptyArrays: true } },
+		{ $unwind: { path: "$userDetails.experiencePoints", preserveNullAndEmptyArrays: true } },
+		{
+			$group: {
+				_id: "$_id",
+				name: { $first: "$name" },
+				logo: { $first: "$logo" },
+				totalMembers: { $first: "$totalMembers" },
+				totalExperience: { $sum: "$userDetails.experiencePoints.points" }
+			}
+		},
+	]).sort({ totalExperience: 'desc' })
 	res.send(communities);
 });
 
 export {
-    communityRouter
+	communityRouter
 }

@@ -1,5 +1,6 @@
 import express from "express";
 import { UserModel } from "../models/User";
+import { CommunityModel } from "../models/Community";
 
 const userRouter = express.Router();
 
@@ -48,12 +49,16 @@ userRouter.get("/", async (_, res) => {
 userRouter.post("/:userId/join/:communityId", async (req, res) => {
 	const { userId, communityId } = req.params;
 	const user = await UserModel.findById(userId).select('community');
-	if (!user) {
-		return res.status(404).send({ message: "User not found" });
+	const community = await CommunityModel.findById(communityId);
+	if (!user || !community) {
+		return res.status(404).send({ message: "User or community not found" });
 	} else if (user?.community !== "") {
 		res.status(403).send({ message: "User already in a community" });
 	} else {
 		await user?.updateOne({ community: communityId })
+		community?.users?.push(user._id)
+		community.$inc("totalMembers", 1)
+		await community.save()
 		res.status(200).send()
 	}
 });
@@ -67,12 +72,20 @@ userRouter.post("/:userId/join/:communityId", async (req, res) => {
 userRouter.delete("/:userId/leave/:communityId", async (req, res) => {
 	const { userId, communityId } = req.params;
 	const user = await UserModel.findById(userId).select('community');
-	if (!user) {
-		return res.status(404).send({ message: "User not found" });
+	const community = await CommunityModel.findById(communityId);
+	if (!user || !community) {
+		return res.status(404).send({ message: "User or community not found" });
 	} else if (user?.community !== communityId) {
 		res.status(403).send({ message: "User is not part of community" });
 	} else {
 		await user?.updateOne({ community: "" })
+		await community.updateOne(
+			{ $inc: { totalMembers: -1 } },
+		)
+		await community.updateOne(
+			{ $pull: { users: userId } },
+		)
+
 		res.status(200).send()
 	}
 });

@@ -11,7 +11,10 @@ class User {
 	public profilePicture?: string;
 
 	@prop({ required: true, select: false, default: [] })
-	public experiencePoints?: {points: number, timestamp: Date}[];
+	public experiencePoints?: { points: number, timestamp: Date }[];
+
+	@prop({ default: "" })
+	public community?: string
 }
 
 export const UserModel = getModelForClass(User);

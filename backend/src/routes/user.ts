@@ -47,8 +47,15 @@ userRouter.get("/", async (_, res) => {
  */
 userRouter.post("/:userId/join/:communityId", async (req, res) => {
 	const { userId, communityId } = req.params;
-	// TODO: Implement the functionality to join a community
-	res.status(501).send();
+	const user = await UserModel.findById(userId).select('community');
+	if (!user) {
+		return res.status(404).send({ message: "User not found" });
+	} else if (user?.community !== "") {
+		res.status(403).send({ message: "User already in a community" });
+	} else {
+		await user?.updateOne({ community: communityId })
+		res.status(200).send()
+	}
 });
 
 /**
@@ -59,10 +66,17 @@ userRouter.post("/:userId/join/:communityId", async (req, res) => {
  */
 userRouter.delete("/:userId/leave/:communityId", async (req, res) => {
 	const { userId, communityId } = req.params;
-	// TODO: Implement the functionality to leave a community
-	res.status(501).send();
+	const user = await UserModel.findById(userId).select('community');
+	if (!user) {
+		return res.status(404).send({ message: "User not found" });
+	} else if (user?.community !== communityId) {
+		res.status(403).send({ message: "User is not part of community" });
+	} else {
+		await user?.updateOne({ community: "" })
+		res.status(200).send()
+	}
 });
 
 export {
-    userRouter
+	userRouter
 }
